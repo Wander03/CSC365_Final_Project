@@ -134,6 +134,7 @@ def main():
                 Column('id', Integer, primary_key=True),
                 Column('userId', Integer, ForeignKey('user.id')),
                 Column('matchId', Integer, ForeignKey('matches.id')),
+                Column('betTypeId', Integer, ForeignKey('betType.id')),
                 Column('amount', DECIMAL(50, 2)),
                 Column('placedTime', DateTime)
             )
