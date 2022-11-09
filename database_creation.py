@@ -27,7 +27,7 @@ def main():
         try:
             conn.execute(sa.text("SET FOREIGN_KEY_CHECKS = 0"))
             conn.execute(sa.text("DROP TABLE IF EXISTS betType, walletType, transactionType, map, user, transactions, "
-                                 "wallet, player, teams, pool, matches, bets, results, teamsSnapshot"))
+                                 "wallet, player, teamId, teams, pool, matches, bets, results, teamsSnapshot"))
             conn.execute(sa.text("SET FOREIGN_KEY_CHECKS = 1"))
 
             Table(
@@ -41,19 +41,22 @@ def main():
                 Column('id', Integer, primary_key=True),
                 Column('type', String(50)),
                 Column('canWithdraw', Boolean),
-                Column('canDeposit', Boolean)
+                Column('canDeposit', Boolean),
+                sa.UniqueConstraint('type')
             )
 
             Table(
                 'transactionType', meta,
                 Column('id', Integer, primary_key=True),
-                Column('type', String(50))
+                Column('type', String(50)),
+                sa.UniqueConstraint('type')
             )
 
             Table(
                 'map', meta,
                 Column('id', Integer, primary_key=True),
-                Column('name', String(50))
+                Column('name', String(50)),
+                sa.UniqueConstraint('name')
             )
 
             Table(
@@ -64,7 +67,9 @@ def main():
                 Column('email', String(50)),
                 Column('username', String(50)),
                 Column('password', String(50)),
-                Column('balance', DECIMAL(50, 2))
+                Column('balance', DECIMAL(50, 2)),
+                sa.UniqueConstraint('email'),
+                sa.UniqueConstraint('username')
             )
 
             Table(
@@ -81,21 +86,29 @@ def main():
                 Column('userId', Integer, ForeignKey('user.id')),
                 Column('typeId', Integer, ForeignKey('walletType.id')),
                 Column('name', String(50)),
-                Column('amountStored', DECIMAL(50, 2))
+                Column('amountStored', DECIMAL(50, 2)),
+                sa.UniqueConstraint('name')
             )
 
             Table(
                 'player', meta,
                 Column('id', Integer, primary_key=True),
-                Column('name', String(50)),
-                Column('avgRating', DECIMAL(50, 2))
+                Column('playerName', String(50)),
+                sa.UniqueConstraint('playerName')
+            )
+
+            Table(
+                'teamId', meta,
+                Column('id', Integer, primary_key=True),
+                Column('teamName', String(50)),
+                sa.UniqueConstraint('teamName')
             )
 
             Table(
                 'teams', meta,
                 Column('id', Integer, primary_key=True),
                 Column('playerId', Integer, ForeignKey('player.id')),
-                Column('team', String(50))
+                Column('teamId', Integer, ForeignKey('teamId.id'))
             )
 
             Table(
@@ -139,7 +152,7 @@ def main():
                 'teamsSnapshot', meta,
                 Column('id', Integer, primary_key=True),
                 Column('playerId', Integer, ForeignKey('player.id')),
-                Column('team', String(50))
+                Column('teamId', Integer, ForeignKey('teamId.id'))
             )
 
             meta.create_all(engine)
