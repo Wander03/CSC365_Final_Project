@@ -14,6 +14,7 @@ def main():
 
     df_results['team_1'] = df_results['team_1'].str.upper()
     df_results['team_2'] = df_results['team_2'].str.upper()
+    df_results['i'] = range(len(df_results))
 
     df_players['player_name'] = df_players['player_name'].str.upper()
     df_players['team'] = df_players['team'].str.upper()
@@ -47,27 +48,25 @@ def main():
     df_team_tbl = df_team_tbl[['playerId', 'teamId']]
     df_team_tbl.drop_duplicates(subset=['playerId', 'teamId'], inplace=True)
 
-    # Prep matches
+    # Prep matches and results
     df_results = df_results.merge(df_map, left_on='_map', right_on='name')
     df_results = df_results.merge(df_team, left_on='team_1', right_on='teamName')
     df_results = df_results.merge(df_team, left_on='team_2', right_on='teamName')
-    df_matches = df_results[['teamId_x', 'teamId_y', 'mapId', 'date']]
+    df_matches = df_results[['i', 'teamId_x', 'teamId_y', 'mapId', 'date']].copy()
 
-    # Prep results
-    # calculate total kills and hs then join onto results and dont forget the match id
-    # find way to get consistent index for matches and results tbl the join onto both
-    df_join = df_players.merge(df_results,
-                               left_on=['event_id', 'match_id', 'date', 'team'],
-                               right_on=['event_id', 'match_id', 'date', 'team_1'])
-    df_calc = df_join[['event_id', 'match_id', 'm1_kills', 'm1_hs']].groupby(['event_id', 'match_id']).sum()
-    df_calc = df_results.merge(df_calc, on=['event_id', 'match_id'])
+    df_join = df_results.merge(df_players,
+                               right_on=['event_id', 'match_id', 'date', 'team'],
+                               left_on=['event_id', 'match_id', 'date', 'team_1'],
+                               how='left')
+    df_calc = df_join[['i', 'm1_kills', 'm1_hs']].groupby(['i']).sum()
+    df_calc = df_matches.merge(df_calc, left_on=['i'], right_on=['i'])
+    df_calc = df_calc.merge(df_results[['i', 'result_1', 'result_2']].copy(), left_on=['i'], right_on=['i'])
+    df_calc = df_calc[df_calc['m1_kills'] != 0]
+    df_calc.sort_values('date', inplace=True)
+    df_calc['i'] = range(1, len(df_calc) + 1)
 
-    print(df_calc)
-
-    #
-    # df_teams = df_join[['teamId_x', 'playerId']]
-    # df_teams = df_teams.unique()
-    # df_matches = df_join[['teamId_x', 'teamId_y', 'mapId', 'date']]
+    df_matches = df_calc[['i', 'teamId_x', 'teamId_y', 'mapId', 'date']].copy()
+    df_results_data = df_calc[['i', 'm1_kills', 'm1_hs', 'result_1', 'result_2']].copy()
 
     # metadata_obj = sa.MetaData()
     # teams = sa.Table("teams", metadata_obj, autoload_with=engine)
