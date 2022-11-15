@@ -56,8 +56,8 @@ def main():
                 Column('firstName', String(50)),
                 Column('lastName', String(50)),
                 Column('email', String(50)),
-                Column('password', String(50)),
-                Column('balance', DECIMAL(50, 2)),
+                Column('passwordHash', String(50)),
+                Column('salt', Integer),
                 sa.UniqueConstraint('email')
             )
 
