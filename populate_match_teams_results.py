@@ -68,18 +68,9 @@ def main():
     df_matches = df_calc[['i', 'teamId_x', 'teamId_y', 'mapId', 'date']].copy()
     df_results_data = df_calc[['i', 'm1_kills', 'm1_hs', 'result_1', 'result_2']].copy()
 
-    # metadata_obj = sa.MetaData()
-    # teams = sa.Table("teams", metadata_obj, autoload_with=engine)
-    #
-    # with engine.begin() as conn:
-    #     try:
-    #
-    #         for i in df_team_tbl:
-    #             conn.execute(sa.insert(teams),
-    #                          [{'playerId': f"{df_team_tbl['playerId'][i]}", 'teamId': f"{df_team_tbl['teamId'][i]}"}])
-    #
-    #     except Exception as error:
-    #         print(f"Error returned: <<<{error}>>>")
+    df_team_tbl.to_csv('data/teamsData.csv')
+    df_matches.to_csv('data/matchesData.csv')
+    df_results_data.to_csv('data/resultsData.csv')
 
 
 if __name__ == '__main__':

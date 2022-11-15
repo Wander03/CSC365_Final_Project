@@ -26,7 +26,7 @@ def main():
         meta = sa.MetaData()
         try:
             conn.execute(sa.text("SET FOREIGN_KEY_CHECKS = 0"))
-            conn.execute(sa.text("DROP TABLE IF EXISTS betType, walletType, transactionType, map, user, transactions, "
+            conn.execute(sa.text("DROP TABLE IF EXISTS betType, transactionType, map, user, transactions, "
                                  "wallet, player, teamId, teams, pool, matches, bets, results, teamsSnapshot"))
             conn.execute(sa.text("SET FOREIGN_KEY_CHECKS = 1"))
 
@@ -34,15 +34,6 @@ def main():
                 'betType', meta,
                 Column('id', Integer, primary_key=True),
                 Column('type', String(50))
-            )
-
-            Table(
-                'walletType', meta,
-                Column('id', Integer, primary_key=True),
-                Column('type', String(50)),
-                Column('canWithdraw', Boolean),
-                Column('canDeposit', Boolean),
-                sa.UniqueConstraint('type')
             )
 
             Table(
@@ -65,11 +56,9 @@ def main():
                 Column('firstName', String(50)),
                 Column('lastName', String(50)),
                 Column('email', String(50)),
-                Column('username', String(50)),
                 Column('password', String(50)),
                 Column('balance', DECIMAL(50, 2)),
-                sa.UniqueConstraint('email'),
-                sa.UniqueConstraint('username')
+                sa.UniqueConstraint('email')
             )
 
             Table(
@@ -84,7 +73,6 @@ def main():
                 'wallet', meta,
                 Column('id', Integer, primary_key=True),
                 Column('userId', Integer, ForeignKey('user.id')),
-                Column('typeId', Integer, ForeignKey('walletType.id')),
                 Column('name', String(50)),
                 Column('amountStored', DECIMAL(50, 2)),
                 sa.UniqueConstraint('name')
@@ -122,10 +110,9 @@ def main():
             Table(
                 'matches', meta,
                 Column('id', Integer, primary_key=True),
-                Column('team1Id', Integer, ForeignKey('teams.id')),
-                Column('team2Id', Integer, ForeignKey('teams.id')),
+                Column('team1Id', Integer, ForeignKey('teamId.id')),
+                Column('team2Id', Integer, ForeignKey('teamId.id')),
                 Column('mapId', Integer, ForeignKey('map.id')),
-                Column('poolId', Integer),
                 Column('date', Date)
             )
 
