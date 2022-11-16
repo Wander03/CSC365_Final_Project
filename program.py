@@ -263,7 +263,7 @@ class Program:
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
         else:
-            print("idk man\n")
+            print("idk man lol\n")
             self.betHistory()
 
 
