@@ -29,11 +29,11 @@ def main():
     df_transactions = pd.DataFrame(columns=['transactionTypeId', 'userId', 'amount'])
     df_pool = pd.DataFrame(columns=['matchId', 'betType', 'amount'])
     df_user = pd.DataFrame(columns=['id', 'firstName', 'lastName', 'email', 'passwordHash', 'salt', 'balance'])
-    df_wallet = pd.DataFrame(columns=['userId', 'name', 'amountStored'])
+    df_wallet = pd.DataFrame(columns=['id', 'userId', 'name', 'amountStored'])
 
     # create users and wallets
     userInfo = []
-    for i in range(10):
+    for i in range(1, 11):
         y = random.randint(1, 10)
         email = ''.join(random.choice(string.ascii_letters) for x in range(y)) + "@gmail.com"
 
@@ -75,7 +75,8 @@ def main():
         df_user = pd.concat([df_user, temp])
         userInfo.append([email, plainPassword])
 
-        wallet = {'userId': [i],
+        wallet = {'id': [i],
+                  'userId': [i],
                   'name': [names.get_full_name()],
                   'amountStored': [0]}
         temp = pd.DataFrame(wallet)
