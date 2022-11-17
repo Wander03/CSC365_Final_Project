@@ -57,7 +57,7 @@ def main():
                 Column('lastName', String(50)),
                 Column('email', String(50)),
                 Column('passwordHash', String(50)),
-                Column('salt', Integer),
+                Column('salt', String(50)),
                 sa.UniqueConstraint('email')
             )
 
@@ -101,9 +101,9 @@ def main():
 
             Table(
                 'pool', meta,
-                # Column('id', Integer, primary_key=True),
-                Column('matchId', Integer, ForeignKey('matches.id'), primary_key=True),
-                Column('betType', Integer, ForeignKey('betType.id'), primary_key=True),
+                Column('id', Integer, primary_key=True),
+                Column('matchId', Integer, ForeignKey('matches.id')),
+                Column('betType', Integer, ForeignKey('betType.id')),
                 Column('amount', DECIMAL(50, 2))
             )
 
