@@ -23,7 +23,7 @@ class Program:
             self.start()
 
     def login(self):
-        self.input = input("Login with your email and password: <email> <passowrd>\nBack\nQuit\n\n")
+        self.input = input("Login with your email and password: <email> <password>\nBack\nQuit\n\n")
         command = self.input.split()
 
         if command[0].lower() == 'b' or command[0].lower() == 'back':
@@ -37,7 +37,7 @@ class Program:
             self.login()
 
     def register(self):
-        self.input = input("Register your email and password\nBack\nQuit\n\n")
+        self.input = input("Register your <email> <password>\nBack\nQuit\n\n")
         command = self.input.split()
 
         if command[0].lower() == 'b' or command[0].lower() == 'back':
@@ -46,7 +46,7 @@ class Program:
             quit()
         else:
             print("The email is already in use, please try again\n")
-            self.login()
+            self.register()
 
     def home(self):
         self.input = input("Bet\nHistory\nAccount\nLogout\nQuit\n\n")
