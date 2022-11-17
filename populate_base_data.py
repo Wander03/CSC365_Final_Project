@@ -17,6 +17,10 @@ def main():
     populate_match_teams_results.main()
     print('\nmatch, teams, and results created\n')
 
+    ans = 'n'
+    while ans != 'y':
+        ans = input('are teams, matches and results imported?\ny/n\n')
+
     populate_fake_data.main()
     print('fake data created\n')
 

@@ -65,7 +65,7 @@ def main():
                 'transactions', meta,
                 Column('id', Integer, primary_key=True),
                 Column('transactionTypeId', Integer, ForeignKey('transactionType.id')),
-                Column('userId', Integer, ForeignKey('user.id')),
+                Column('walletId', Integer, ForeignKey('wallet.id')),
                 Column('amount', DECIMAL(50, 2))
             )
 
@@ -103,7 +103,7 @@ def main():
                 'pool', meta,
                 Column('id', Integer, primary_key=True),
                 Column('matchId', Integer, ForeignKey('matches.id')),
-                Column('betType', Integer, ForeignKey('betType.id')),
+                Column('betTypeId', Integer, ForeignKey('betType.id')),
                 Column('amount', DECIMAL(50, 2))
             )
 
@@ -119,11 +119,11 @@ def main():
             Table(
                 'bets', meta,
                 Column('id', Integer, primary_key=True),
-                Column('userId', Integer, ForeignKey('user.id')),
+                Column('transactionId', Integer, ForeignKey('transactions.id')),
                 Column('matchId', Integer, ForeignKey('matches.id')),
                 Column('betTypeId', Integer, ForeignKey('betType.id')),
-                Column('amount', DECIMAL(50, 2)),
-                Column('placedTime', DateTime)
+                Column('guess', Integer),
+                Column('amount', DECIMAL(50, 2))
             )
 
             Table(
