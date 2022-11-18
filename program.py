@@ -21,11 +21,11 @@ class Program:
         # self.host = os.environ.get("DB_HOST")
 
         # Connection Parameters (you will sub in with your own databases values)
-        self.escapedPassword = "Fall22_CSC365-026575269"
-        self.sqldialect = "mysql+pymysql"
-        self.username = "adkerr"
-        self.database = "adkerr"
-        self.host = "mysql.labthreesixfive.com"
+        self.escapedPassword = "dylan"
+        self.sqldialect = "you"
+        self.username = "fool"
+        self.database = "pushed"
+        self.host = "this to github with the info still here"
 
         # Build the connection string based on database specific parameters
         self.connectionString = f"{self.sqldialect}://{self.username}:{self.escapedPassword}@{self.host}/{self.database}"
