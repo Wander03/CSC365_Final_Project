@@ -4,6 +4,9 @@ import sqlalchemy as sa
 # from dotenv import load_dotenv
 from sqlalchemy import Table, Column, Integer, String, Date, DateTime, DECIMAL, Boolean, ForeignKey
 import password_hash
+from base64 import b64encode
+import hashlib
+
 
 class Program:
 
@@ -23,7 +26,6 @@ class Program:
         self.username = "adkerr"
         self.database = "adkerr"
         self.host = "mysql.labthreesixfive.com"
-
 
         # Build the connection string based on database specific parameters
         self.connectionString = f"{self.sqldialect}://{self.username}:{self.escapedPassword}@{self.host}/{self.database}"
@@ -60,41 +62,107 @@ class Program:
             self.start()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
-        elif command[0] == 'hacks' and command[1] == '****':
-            self.home()
-        else:
-            print("The information entered is not correct, please try again\n")
+        elif len(command) == 1 or len(command) > 2:
+            print("Please follow the correct format\n")
             self.login()
+        else:
+            self.email = command[0]
+            self.password = command[1]
+            if not self.emailChecker(self.email):
+                print("The information entered is incorrect\n")
+                self.login()
+            if self.passwordChecker(self.email, self.password):
+                print("Login Successful!\n")
+                self.home()
+            else:
+                print("The information entered is incorrect\n")
+                self.login()
 
     def register(self):
         self.input = input("Register your <email> <password>\nBack\nQuit\n\n")
         command = self.input.split()
 
-
         if command[0].lower() == 'b' or command[0].lower() == 'back':
             self.start()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
-        elif len(command) == 1:
+        elif len(command) == 1 or len(command) > 2:
             print("Please follow the correct format\n")
             self.register()
         else:
             self.email = command[0]
-            self.emailChecker(self.email)
-            self.password, self.salt = password_hash.create_hash(command[1])
+            if not self.emailChecker(self.email):
+                self.password, self.salt = password_hash.create_hash(command[1])
+                self.password = self.password.hex()
+                self.salt = self.salt.hex()
+                firstname = input("Enter first name\nCancel\nQuit\n\n")
+                if firstname.lower() == "c" or firstname.lower() == "cancel":
+                    self.start()
+                if firstname.lower() == "q" or firstname.lower() == "quit":
+                    quit()
+                lastname = input("Enter last name\nCancel\nQuit\n\n")
+                if lastname.lower() == "c" or lastname.lower() == "cancel":
+                    self.start()
+                if lastname.lower() == "q" or lastname.lower() == "quit":
+                    quit()
+                walletname = input("Enter wallet name\nCancel\nQuit\n\n")
+                if walletname.lower() == "c" or walletname.lower() == "cancel":
+                    self.start()
+                if walletname.lower() == "q" or walletname.lower() == "quit":
+                    quit()
+                metadata_obj = sa.MetaData()
+                user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+                try:
+                    with self.engine.begin() as conn:
+                        conn.execute(sa.insert(user), [
+                            {'firstName': [firstname],
+                             'lastName': [lastname],
+                             'email': [self.email],
+                             'passwordHash': [str(self.password)],
+                             'salt': [str(self.salt)]}
+                        ],
+                                     )
+                except Exception as error:
+                    print(f"Error returned: <<<{error}>>>")
+            else:
+                print("This email is already in use, please try again\n")
+                self.register()
+            self.start()
 
     def emailChecker(self, e):
         metadata_obj = sa.MetaData()
-        user = sa.Table("results", metadata_obj, autoload_with=self.engine)
+        user = sa.Table("user", metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = sa.select(user)
-                print(result)
+                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
                 for email in result:
-                    print(f"email: {email}")
+                    return True
+                return False
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
-        print(result)
+
+    def passwordChecker(self, e, p):
+        metadata_obj = sa.MetaData()
+        user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+        try:
+            with self.engine.begin() as conn:
+                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
+                for z in result:
+                    s = f"{z[5]}"
+        except Exception as error:
+            print(f"Error returned: <<<{error}>>>")
+        s = bytes.fromhex(s)
+        reversed = password_hash.get_hash(p, s)
+        try:
+            with self.engine.begin() as conn:
+                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
+                for z in result:
+                    pa = f"{z[4]}"
+        except Exception as error:
+            print(f"Error returned: <<<{error}>>>")
+        pa = bytes.fromhex(pa)
+        return reversed == pa
+
 
     def home(self):
         self.input = input("Bet\nHistory\nAccount\nLogout\nQuit\n\n")
@@ -122,7 +190,7 @@ class Program:
             self.home()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
-        elif command[0].lower() == 'c' or command[0].lower() == 'change'\
+        elif command[0].lower() == 'c' or command[0].lower() == 'change' \
                 or (command[0].lower() == 'change' and
                     command[1].lower() == 'wallet'):
             self.changeWallet()
@@ -130,7 +198,7 @@ class Program:
             self.deposit()
         elif command[0].lower() == 'w' or command[0].lower() == 'withdraw':
             self.withdraw()
-        elif command[0].lower() == 'u' or command[0].lower() == 'update'\
+        elif command[0].lower() == 'u' or command[0].lower() == 'update' \
                 or (command[0].lower() == 'p' and
                     command[0].lower() == 'password'):
             self.password()
@@ -216,7 +284,7 @@ class Program:
                 or (command[0].lower() == 'place' and
                     command[1].lower() == 'bets'):
             self.placeBet()
-        elif command[0].lower() == 'v' or command[0].lower() == 'view'\
+        elif command[0].lower() == 'v' or command[0].lower() == 'view' \
                 or command[0].lower() == 'm' or command[0].lower() == 'matches':
             self.viewUpcomingMatch()
         else:
@@ -313,10 +381,6 @@ class Program:
         else:
             print("idk man lol\n")
             self.betHistory()
-
-
-
-
 
 
 def main():
