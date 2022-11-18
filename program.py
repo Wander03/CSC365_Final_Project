@@ -1,11 +1,41 @@
+import os
 import pandas as pd
-
+import sqlalchemy as sa
+# from dotenv import load_dotenv
+from sqlalchemy import Table, Column, Integer, String, Date, DateTime, DECIMAL, Boolean, ForeignKey
+import password_hash
 
 class Program:
 
     def __init__(self):
+        # load_dotenv()
+
+        # # Connection Parameters (you will sub in with your own databases values)
+        # self.escapedPassword = urllib.parse.quote_plus(os.environ.get("DB_PASSWORD"))
+        # self.sqldialect = os.environ.get("DB_DIALECT")
+        # self.username = os.environ.get("DB_USER")
+        # self.database = os.environ.get("DB_NAME")
+        # self.host = os.environ.get("DB_HOST")
+
+        # Connection Parameters (you will sub in with your own databases values)
+        self.escapedPassword = "Fall22_CSC365-026575269"
+        self.sqldialect = "mysql+pymysql"
+        self.username = "adkerr"
+        self.database = "adkerr"
+        self.host = "mysql.labthreesixfive.com"
+
+
+        # Build the connection string based on database specific parameters
+        self.connectionString = f"{self.sqldialect}://{self.username}:{self.escapedPassword}@{self.host}/{self.database}"
+
+        # Create a new DB engine based on our connection string
+        self.engine = sa.create_engine(self.connectionString)
+
         self.input = None
         self.input2 = None
+        self.email = None
+        self.password = None
+        self.salt = None
         self.start()
 
     def start(self):
@@ -40,13 +70,31 @@ class Program:
         self.input = input("Register your <email> <password>\nBack\nQuit\n\n")
         command = self.input.split()
 
+
         if command[0].lower() == 'b' or command[0].lower() == 'back':
             self.start()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
-        else:
-            print("The email is already in use, please try again\n")
+        elif len(command) == 1:
+            print("Please follow the correct format\n")
             self.register()
+        else:
+            self.email = command[0]
+            self.emailChecker(self.email)
+            self.password, self.salt = password_hash.create_hash(command[1])
+
+    def emailChecker(self, e):
+        metadata_obj = sa.MetaData()
+        user = sa.Table("results", metadata_obj, autoload_with=self.engine)
+        try:
+            with self.engine.begin() as conn:
+                result = sa.select(user)
+                print(result)
+                for email in result:
+                    print(f"email: {email}")
+        except Exception as error:
+            print(f"Error returned: <<<{error}>>>")
+        print(result)
 
     def home(self):
         self.input = input("Bet\nHistory\nAccount\nLogout\nQuit\n\n")
