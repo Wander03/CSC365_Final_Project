@@ -116,8 +116,7 @@ def simulate_betting(i, u, df_wallet, df_bets, df_pool, df_transactions):
             {'id': [counter], 'transactionTypeId': [3], 'walletId': u, 'amount': [bAmount]})  # add to transaction
         counter += 1
         df_wallet.loc[df_wallet['userId'] == u, 'amountStored'] = money - bAmount  # subtract from wallet
-        new_bets = pd.DataFrame({'userId': [u],
-                                 'transactionId': [counter],
+        new_bets = pd.DataFrame({'transactionId': [counter],
                                  'matchId': [i],
                                  'betTypeId': [bType],
                                  'guess': [guess],
@@ -205,7 +204,7 @@ def main():
     df_betType = pd.DataFrame(data={'team1win', 'team2win', 'guessKillsEnd', 'guessHsEnd'}, columns=['type'])
     df_transactionType = pd.DataFrame(data={'withdraw', 'deposit', 'placeBet', 'payoutBet'}, columns=['type'])
 
-    df_bets = pd.DataFrame(columns=['userId', 'transactionId', 'matchId', 'betTypeId', 'guess', 'amount'])
+    df_bets = pd.DataFrame(columns=['transactionId', 'matchId', 'betTypeId', 'guess', 'amount'])
     df_transactions = pd.DataFrame(columns=['id', 'transactionTypeId', 'walletId', 'amount'])
     df_pool = pd.DataFrame(columns=['matchId', 'betTypeId', 'amount'])
     df_user = pd.DataFrame(columns=['id', 'firstName', 'lastName', 'email', 'passwordHash', 'salt', 'balance'])
