@@ -56,8 +56,8 @@ def main():
                 Column('firstName', String(50)),
                 Column('lastName', String(50)),
                 Column('email', String(50)),
-                Column('passwordHash', String(50)),
-                Column('salt', String(50)),
+                Column('passwordHash', String(500)),
+                Column('salt', String(500)),
                 sa.UniqueConstraint('email')
             )
 

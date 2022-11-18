@@ -50,6 +50,9 @@ def create_users_wallets(df_user, df_wallet):
         else:
             first = names.get_first_name('female')
 
+        salt = salt.hex()
+        password = password.hex()
+
         user = {'id': [i],
                 'firstName': [first],
                 'lastName': [names.get_last_name()],
