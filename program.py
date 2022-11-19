@@ -1,11 +1,8 @@
 import os
-import pandas as pd
+import urllib.parse
 import sqlalchemy as sa
 from dotenv import load_dotenv
-from sqlalchemy import Table, Column, Integer, String, Date, DateTime, DECIMAL, Boolean, ForeignKey
 import password_hash
-from base64 import b64encode
-import hashlib
 
 
 class Program:
@@ -66,14 +63,15 @@ class Program:
         else:
             self.email = command[0]
             self.password = command[1]
-            if not self.emailChecker(self.email):
-                print("The information entered is incorrect\n")
-                self.login()
-            if self.passwordChecker(self.email, self.password):
-                self.getUserId(self.email)
-                self.getWalletId(self.userid)
-                print("Login Successful!\n")
-                self.home()
+            if self.emailChecker(self.email):
+                if self.passwordChecker(self.email, self.password):
+                    self.getUserId(self.email)
+                    self.getWalletId(self.userid)
+                    print("Login Successful!\n")
+                    self.home()
+                else:
+                    print("The information entered is incorrect\n")
+                    self.login()
             else:
                 print("The information entered is incorrect\n")
                 self.login()
@@ -120,53 +118,56 @@ class Program:
                 firstname = input("Enter first name\nCancel\nQuit\n\n")
                 if firstname.lower() == "c" or firstname.lower() == "cancel":
                     self.start()
-                if firstname.lower() == "q" or firstname.lower() == "quit":
+                elif firstname.lower() == "q" or firstname.lower() == "quit":
                     quit()
-                lastname = input("Enter last name\nCancel\nQuit\n\n")
-                if lastname.lower() == "c" or lastname.lower() == "cancel":
-                    self.start()
-                if lastname.lower() == "q" or lastname.lower() == "quit":
-                    quit()
-                walletname = input("Enter wallet name\nCancel\nQuit\n\n")
-                if walletname.lower() == "c" or walletname.lower() == "cancel":
-                    self.start()
-                if walletname.lower() == "q" or walletname.lower() == "quit":
-                    quit()
-                metadata_obj = sa.MetaData()
-                user = sa.Table("user", metadata_obj, autoload_with=self.engine)
-                try:
-                    with self.engine.begin() as conn:
-                        conn.execute(sa.insert(user), [
-                            {'firstName': [firstname],
-                             'lastName': [lastname],
-                             'email': [self.email],
-                             'passwordHash': [str(self.password)],
-                             'salt': [str(self.salt)]}
-                        ],
-                                     )
-                except Exception as error:
-                    print(f"Error returned: <<<{error}>>>")
-                try:
-                    with self.engine.begin() as conn:
-                        result = conn.execute(sa.select(user).where(user.c.email == f"{self.email}"))
-                        for a in result:
-                            userid = f"{a[0]}"
-                except Exception as error:
-                    print(f"Error returned: <<<{error}>>>")
-                metadata_obj = sa.MetaData()
-                wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
-                try:
-                    with self.engine.begin() as conn:
-                        conn.execute(sa.insert(wallet), [
-                            {'userId': [userid],
-                             'name': [walletname],
-                             'amountStored': [0]}
-                        ],
-                                     )
-                except Exception as error:
-                    print(f"Error returned: <<<{error}>>>")
-                print("Registration Successful! You may now login\n")
-                self.start()
+                else:
+                    lastname = input("Enter last name\nCancel\nQuit\n\n")
+                    if lastname.lower() == "c" or lastname.lower() == "cancel":
+                        self.start()
+                    elif lastname.lower() == "q" or lastname.lower() == "quit":
+                        quit()
+                    else:
+                        walletname = input("Enter wallet name\nCancel\nQuit\n\n")
+                        if walletname.lower() == "c" or walletname.lower() == "cancel":
+                            self.start()
+                        elif walletname.lower() == "q" or walletname.lower() == "quit":
+                            quit()
+                        else:
+                            metadata_obj = sa.MetaData()
+                            user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+                            try:
+                                with self.engine.begin() as conn:
+                                    conn.execute(sa.insert(user), [
+                                        {'firstName': [firstname],
+                                         'lastName': [lastname],
+                                         'email': [self.email],
+                                         'passwordHash': [str(self.password)],
+                                         'salt': [str(self.salt)]}
+                                    ],
+                                                 )
+                            except Exception as error:
+                                print(f"Error returned: <<<{error}>>>")
+                            try:
+                                with self.engine.begin() as conn:
+                                    result = conn.execute(sa.select(user).where(user.c.email == f"{self.email}"))
+                                    for a in result:
+                                        userid = f"{a[0]}"
+                            except Exception as error:
+                                print(f"Error returned: <<<{error}>>>")
+                            metadata_obj = sa.MetaData()
+                            wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
+                            try:
+                                with self.engine.begin() as conn:
+                                    conn.execute(sa.insert(wallet), [
+                                        {'userId': [userid],
+                                         'name': [walletname],
+                                         'amountStored': [0]}
+                                    ],
+                                                 )
+                            except Exception as error:
+                                print(f"Error returned: <<<{error}>>>")
+                            print("Registration Successful! You may now login\n")
+                            self.start()
             else:
                 print("This email is already in use, please try again\n")
                 self.register()
@@ -296,17 +297,24 @@ class Program:
         else:
             try:
                 depositamount = float(command[0])
-                with self.engine.begin() as conn:
+                if depositamount >= 10:
+                    with self.engine.begin() as conn:
 
-                    conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
-                                 values(amountStored=float(balance) + depositamount)
-                                 )
-                    conn.execute(sa.insert(transactions), [
-                        {'transactionTypeId': [2], 'walletId': [self.walletid], 'amount': [depositamount]}
-                    ],
-                                 )
-                print("Deposit Successful!\n")
-                self.account()
+                        conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
+                                     values(amountStored=float(balance) + depositamount)
+                                     )
+                        conn.execute(sa.insert(transactions), [
+                            {'transactionTypeId': [2], 'walletId': [self.walletid], 'amount': [depositamount]}
+                        ],
+                                     )
+                    print("Deposit Successful!\n")
+                    self.account()
+                elif depositamount < 10:
+                    print("The minimum deposit is 10 dollars\n")
+                    self.deposit()
+                else:
+                    print("Please enter a valid amount\n")
+                    self.deposit()
             except ValueError:
                 print("Please enter a valid amount\n")
                 self.deposit()
@@ -341,17 +349,24 @@ class Program:
                 if withdrawamount > float(balance):
                     print("Insufficient balance\n")
                     self.withdraw()
-                with self.engine.begin() as conn:
+                elif withdrawamount <= 0:
+                    print("Please enter a valid amount\n")
+                    self.withdraw()
+                elif float(balance) < 50:
+                    print("A minimum balance of 50 dollars is required to make a withdrawal\n")
+                    self.withdraw()
+                else:
+                    with self.engine.begin() as conn:
 
-                    conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
-                                 values(amountStored=float(balance) - withdrawamount)
-                                 )
-                    conn.execute(sa.insert(transactions), [
-                        {'transactionTypeId': [1], 'walletId': [self.walletid], 'amount': [withdrawamount]}
-                    ],
-                                 )
-                print("Withdrawal Successful!\n")
-                self.account()
+                        conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
+                                     values(amountStored=float(balance) - withdrawamount)
+                                     )
+                        conn.execute(sa.insert(transactions), [
+                            {'transactionTypeId': [1], 'walletId': [self.walletid], 'amount': [withdrawamount]}
+                        ],
+                                     )
+                    print("Withdrawal Successful!\n")
+                    self.account()
             except ValueError:
                 print("Please enter a valid amount\n")
                 self.withdraw()
@@ -492,9 +507,10 @@ class Program:
                 if guess < 0 or guess > 9:
                     print("Please enter a valid guess\n")
                     self.placeBet2()
-                self.bettype = int(command[0])
-                self.betguess = guess
-                self.placeBet3()
+                else:
+                    self.bettype = int(command[0])
+                    self.betguess = guess
+                    self.placeBet3()
             except ValueError:
                 print("Please enter a valid guess\n")
                 self.placeBet2()
@@ -509,8 +525,7 @@ class Program:
             with self.engine.begin() as conn:
                 result = conn.execute(sa.select(wallet).where(wallet.c.userId == self.userid))
                 for a in result:
-                    walletid = a[0]
-                    balance = a[3]
+                    balance = float(a[3])
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -530,41 +545,45 @@ class Program:
                 if betamount > balance:
                     print("Insufficient funds\n")
                     self.placeBet3()
-                metadata_obj = sa.MetaData()
-                wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
-                pool = sa.Table("pool", metadata_obj, autoload_with=self.engine)
-                transactions = sa.Table("transactions", metadata_obj, autoload_with=self.engine)
-                bets = sa.Table("bets", metadata_obj, autoload_with=self.engine)
-                with self.engine.begin() as conn:
+                elif betamount < 0:
+                    print("Please enter a valid bet amount\n")
+                    self.placeBet3()
+                else:
+                    metadata_obj = sa.MetaData()
+                    wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
+                    pool = sa.Table("pool", metadata_obj, autoload_with=self.engine)
+                    transactions = sa.Table("transactions", metadata_obj, autoload_with=self.engine)
+                    bets = sa.Table("bets", metadata_obj, autoload_with=self.engine)
+                    with self.engine.begin() as conn:
 
-                    conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
-                                 values(amountStored=float(balance) - betamount)
-                                 )
-                    conn.execute(sa.insert(pool), [
-                        {'matchId': [self.betmatch], 'betTypeId': [self.bettype], 'amount': [betamount]}
-                    ],
-                                 )
-                    conn.execute(sa.insert(transactions), [
-                        {'transactionTypeId': [3], 'walletId': [walletid], 'amount': [betamount]}
-                    ],
-                                 )
-                    result = conn.execute(sa.select(transactions).where(transactions.c.walletId == walletid))
-                    transactionids = []
-                    for a in result:
-                        transactionids.append(a[0])
-                    tid = transactionids[-1]
+                        conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
+                                     values(amountStored=float(balance) - betamount)
+                                     )
+                        conn.execute(sa.insert(pool), [
+                            {'matchId': [self.betmatch], 'betTypeId': [self.bettype], 'amount': [betamount]}
+                        ],
+                                     )
+                        conn.execute(sa.insert(transactions), [
+                            {'transactionTypeId': [3], 'walletId': [self.walletid], 'amount': [betamount]}
+                        ],
+                                     )
+                        result = conn.execute(sa.select(transactions).where(transactions.c.walletId == self.walletid))
+                        transactionids = []
+                        for a in result:
+                            transactionids.append(a[0])
+                        tid = transactionids[-1]
 
-                    conn.execute(sa.insert(bets), [
-                        {'userId': [self.userid],
-                         'transactionId': [tid],
-                         'matchId': [self.betmatch],
-                         'betTypeId': [self.bettype],
-                         'guess': [self.betguess],
-                         'amount': [betamount]}
-                    ],
-                                 )
-                    print("Bet successfully placed!\n")
-                    self.bet()
+                        conn.execute(sa.insert(bets), [
+                            {'userId': [self.userid],
+                             'transactionId': [tid],
+                             'matchId': [self.betmatch],
+                             'betTypeId': [self.bettype],
+                             'guess': [self.betguess],
+                             'amount': [betamount]}
+                        ],
+                                     )
+                        print("Bet successfully placed!\n")
+                        self.bet()
             except ValueError:
                 print("Please enter a valid bet amount\n")
                 self.placeBet3()
@@ -714,66 +733,68 @@ class Program:
             if len(command2) > 1:
                 print("Please enter a valid map ID\n")
                 self.matchHistory()
-            try:
-                mwant = int(command2[0])
-                sql = f"""
-                      select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
-                        from results
-                            inner join matches on results.matchid = matches.id
-                            inner join teamId as t1 on matches.team1Id = t1.id
-                            inner join teamId as t2 on matches.team2Id = t2.id
-                            inner join map as m on matches.mapId = m.id
-                        where date < curdate() and m.id = {mwant}
-                        order by date desc
-                        limit 50                  
-                    """
+            else:
                 try:
-                    with self.engine.begin() as conn:
-                        result = conn.execute(sa.text(sql))
-                        for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
-                            print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
-                                  f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
-                                  f"Team2 Score: {t2s} Map: {m}, Date: {date}")
-                except Exception as error:
-                    print(f"Error returned: <<<{error}>>>")
-                print("\n")
-                self.matchHistory()
-            except ValueError:
-                print("Please enter a valid map ID\n")
-                self.matchHistory()
+                    mwant = int(command2[0])
+                    sql = f"""
+                          select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
+                            from results
+                                inner join matches on results.matchid = matches.id
+                                inner join teamId as t1 on matches.team1Id = t1.id
+                                inner join teamId as t2 on matches.team2Id = t2.id
+                                inner join map as m on matches.mapId = m.id
+                            where date < curdate() and m.id = {mwant}
+                            order by date desc
+                            limit 50                  
+                        """
+                    try:
+                        with self.engine.begin() as conn:
+                            result = conn.execute(sa.text(sql))
+                            for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
+                                print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
+                                      f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
+                                      f"Team2 Score: {t2s} Map: {m}, Date: {date}")
+                    except Exception as error:
+                        print(f"Error returned: <<<{error}>>>")
+                    print("\n")
+                    self.matchHistory()
+                except ValueError:
+                    print("Please enter a valid map ID\n")
+                    self.matchHistory()
         elif command[0] == "2":
             self.input2 = input("Enter the Match ID\n\n")
             command2 = self.input2.split()
             if len(command2) > 1:
                 print("Please enter a valid Match ID\n")
                 self.matchHistory()
-            try:
-                mwant = int(command2[0])
-                sql2 = f"""
-                             select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
-                               from results
-                                   inner join matches on results.matchid = matches.id
-                                   inner join teamId as t1 on matches.team1Id = t1.id
-                                   inner join teamId as t2 on matches.team2Id = t2.id
-                                   inner join map as m on matches.mapId = m.id
-                               where date < curdate() and results.matchid = {mwant}
-                               order by date desc
-                               limit 50                  
-                           """
+            else:
                 try:
-                    with self.engine.begin() as conn:
-                        result = conn.execute(sa.text(sql2))
-                        for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
-                            print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
-                                  f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
-                                  f"Team2 Score: {t2s} Map: {m}, Date: {date}")
-                except Exception as error:
-                    print(f"Error returned: <<<{error}>>>")
-                print("\n")
-                self.matchHistory()
-            except ValueError:
-                print("Please enter a valid Match ID\n")
-                self.matchHistory()
+                    mwant = int(command2[0])
+                    sql2 = f"""
+                                 select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
+                                   from results
+                                       inner join matches on results.matchid = matches.id
+                                       inner join teamId as t1 on matches.team1Id = t1.id
+                                       inner join teamId as t2 on matches.team2Id = t2.id
+                                       inner join map as m on matches.mapId = m.id
+                                   where date < curdate() and results.matchid = {mwant}
+                                   order by date desc
+                                   limit 50                  
+                               """
+                    try:
+                        with self.engine.begin() as conn:
+                            result = conn.execute(sa.text(sql2))
+                            for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
+                                print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
+                                      f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
+                                      f"Team2 Score: {t2s} Map: {m}, Date: {date}")
+                    except Exception as error:
+                        print(f"Error returned: <<<{error}>>>")
+                    print("\n")
+                    self.matchHistory()
+                except ValueError:
+                    print("Please enter a valid Match ID\n")
+                    self.matchHistory()
         else:
             print("Please select a valid match\n")
             self.matchHistory()
@@ -862,19 +883,23 @@ class Program:
             except ValueError:
                 print("Please enter a valid amount")
                 self.betHistory()
-            s = f"""
-                  select * from transactions
-                    where walletid = {self.walletid} and amount >= {a}             
-                       """
-            try:
-                with self.engine.begin() as conn:
-                    result = conn.execute(sa.text(s))
-                    for id, ttype, wid, amount in result:
-                        print(f"ID: {id}, Amount: {amount}")
-                    print("\n")
-                    self.betHistory()
-            except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+            if a >= 0:
+                s = f"""
+                      select * from transactions
+                        where walletid = {self.walletid} and amount >= {a}             
+                           """
+                try:
+                    with self.engine.begin() as conn:
+                        result = conn.execute(sa.text(s))
+                        for id, ttype, wid, amount in result:
+                            print(f"ID: {id}, Amount: {amount}")
+                        print("\n")
+                        self.betHistory()
+                except Exception as error:
+                    print(f"Error returned: <<<{error}>>>")
+            else:
+                print("Please enter a valid amount")
+                self.betHistory()
         else:
             print("LOSER!\n")
             self.betHistory()
