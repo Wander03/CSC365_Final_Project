@@ -101,8 +101,10 @@ class Program:
     def register(self):
         self.input = input("Register your <email> <password>\nBack\nQuit\n\n")
         command = self.input.split()
-
-        if command[0].lower() == 'b' or command[0].lower() == 'back':
+        if not command:
+            print("Please follow the correct format\n")
+            self.register()
+        elif command[0].lower() == 'b' or command[0].lower() == 'back':
             self.start()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
@@ -135,6 +137,7 @@ class Program:
                         else:
                             metadata_obj = sa.MetaData()
                             user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+                            wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
                             try:
                                 with self.engine.begin() as conn:
                                     conn.execute(sa.insert(user), [
@@ -145,19 +148,9 @@ class Program:
                                          'salt': [str(self.salt)]}
                                     ],
                                                  )
-                            except Exception as error:
-                                print(f"Error returned: <<<{error}>>>")
-                            try:
-                                with self.engine.begin() as conn:
-                                    result = conn.execute(sa.select(user).where(user.c.email == f"{self.email}"))
-                                    for a in result:
-                                        userid = f"{a[0]}"
-                            except Exception as error:
-                                print(f"Error returned: <<<{error}>>>")
-                            metadata_obj = sa.MetaData()
-                            wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
-                            try:
-                                with self.engine.begin() as conn:
+                                    userid = conn.execute(
+                                        sa.select([user.c.id]).where(user.c.email == f"{self.email}")
+                                    ).scalar()
                                     conn.execute(sa.insert(wallet), [
                                         {'userId': [userid],
                                          'name': [walletname],
@@ -177,10 +170,8 @@ class Program:
         user = sa.Table("user", metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
-                for email in result:
-                    return True
-                return False
+                result = conn.execute(sa.select([user.c.email]).where(user.c.email == f"{e}")).scalar()
+                return result is not None
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -189,22 +180,15 @@ class Program:
         user = sa.Table("user", metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
-                for z in result:
-                    s = f"{z[5]}"
+                pa, s = conn.execute(
+                    sa.select([user.c.passwordHash, user.c.salt]).where(user.c.email == f"{e}")
+                ).fetchall()[0]
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
         s = bytes.fromhex(s)
-        reversed = password_hash.get_hash(p, s)
-        try:
-            with self.engine.begin() as conn:
-                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
-                for z in result:
-                    pa = f"{z[4]}"
-        except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
         pa = bytes.fromhex(pa)
-        return reversed == pa
+        retrieved = password_hash.get_hash(p, s)
+        return retrieved == pa
 
     def home(self):
         self.input = input("Bet\nHistory\nAccount\nLogout\nQuit\n\n")
@@ -663,6 +647,7 @@ class Program:
             except ValueError:
                 print("Please select a valid match\n")
                 self.viewUpcomingMatch()
+        self.viewUpcomingMatch()
 
     def history(self):
         self.input = input("Match History\nPersonal History\nBack\nQuit\n\n")
