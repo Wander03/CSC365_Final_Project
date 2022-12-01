@@ -1,5 +1,7 @@
 import os
 import urllib.parse
+
+import pandas as pd
 import sqlalchemy as sa
 from dotenv import load_dotenv
 import password_hash
@@ -428,21 +430,13 @@ class Program:
             self.bet()
 
     def placeBet(self):
-        sql = """
-                select matches.id, t1.teamname, t2.teamname, m.name, date
-                from matches
-                    inner join teamId as t1 on matches.team1Id = t1.id
-                    inner join teamId as t2 on matches.team2Id = t2.id
-                    inner join map as m on matches.mapId = m.id
-                where date >= curdate()
-                order by date
-                """
-        upcoming = []
+        metadata_obj = sa.MetaData()
+        matches = sa.Table("matches", metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.text(sql))
-                for matchid, team1, team2, map, date in result:
-                    upcoming.append(matchid)
+                upcoming = conn.execute(
+                    sa.select([matches.c.id]).where(matches.c.date >= pd.Timestamp.today())
+                ).scalars().all()
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -507,9 +501,9 @@ class Program:
         wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.select(wallet).where(wallet.c.userId == self.userid))
-                for a in result:
-                    balance = float(a[3])
+                balance = conn.execute(
+                    sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                ).scalar()
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -533,8 +527,6 @@ class Program:
                     print("Please enter a valid bet amount\n")
                     self.placeBet3()
                 else:
-                    metadata_obj = sa.MetaData()
-                    wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
                     pool = sa.Table("pool", metadata_obj, autoload_with=self.engine)
                     transactions = sa.Table("transactions", metadata_obj, autoload_with=self.engine)
                     bets = sa.Table("bets", metadata_obj, autoload_with=self.engine)
@@ -551,11 +543,11 @@ class Program:
                             {'transactionTypeId': [3], 'walletId': [self.walletid], 'amount': [betamount]}
                         ],
                                      )
-                        result = conn.execute(sa.select(transactions).where(transactions.c.walletId == self.walletid))
-                        transactionids = []
-                        for a in result:
-                            transactionids.append(a[0])
-                        tid = transactionids[-1]
+                        tid = conn.execute(
+                            sa.select([transactions.c.id]).
+                            where(transactions.c.walletId == self.walletid).
+                            order_by(transactions.c.id.desc())
+                        ).scalar()
 
                         conn.execute(sa.insert(bets), [
                             {'userId': [self.userid],
@@ -566,8 +558,8 @@ class Program:
                              'amount': [betamount]}
                         ],
                                      )
-                        print("Bet successfully placed!\n")
-                        self.bet()
+                    print("Bet successfully placed!\n")
+                    self.bet()
             except ValueError:
                 print("Please enter a valid bet amount\n")
                 self.placeBet3()
