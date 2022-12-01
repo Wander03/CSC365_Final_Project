@@ -20,12 +20,12 @@ def main():
     today = pd.Timestamp.today()
     df_players.sort_values(by='date', ascending=False, inplace=True)
     diff = floor((today - pd.to_datetime(df_players.iloc[0]['date'])) / np.timedelta64(1, 'D'))
-    df_results['date'] = pd.to_datetime(df_results['date']) + pd.Timedelta(days=diff + 3)
+    df_results['date'] = pd.to_datetime(df_results['date']) + pd.Timedelta(days=diff + 30)
     df_results['i'] = range(len(df_results))
 
     df_players['player_name'] = df_players['player_name'].str.upper()
     df_players['team'] = df_players['team'].str.upper()
-    df_players['date'] = pd.to_datetime(df_players['date']) + pd.Timedelta(days=diff + 3)
+    df_players['date'] = pd.to_datetime(df_players['date']) + pd.Timedelta(days=diff + 30)
 
     # Load env file
     load_dotenv()
