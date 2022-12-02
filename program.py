@@ -35,6 +35,7 @@ class Program:
         self.bettype = None
         self.betguess = None
         self.walletid = None
+        self.metadata_obj = sa.MetaData()
         self.start()
 
     def start(self):
@@ -67,8 +68,7 @@ class Program:
             self.password = command[1]
             if self.emailChecker(self.email):
                 if self.passwordChecker(self.email, self.password):
-                    self.getUserId(self.email)
-                    self.getWalletId(self.userid)
+                    self.getIds(self.email)
                     print("Login Successful!\n")
                     self.home()
                 else:
@@ -78,25 +78,13 @@ class Program:
                 print("The information entered is incorrect\n")
                 self.login()
 
-    def getUserId(self, e):
-        metadata_obj = sa.MetaData()
-        user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+    def getIds(self, e):
+        user = sa.Table("user", self.metadata_obj, autoload_with=self.engine)
+        wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.select(user).where(user.c.email == f"{e}"))
-                for a in result:
-                    self.userid = f"{a[0]}"
-        except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
-
-    def getWalletId(self, u):
-        metadata_obj = sa.MetaData()
-        wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
-        try:
-            with self.engine.begin() as conn:
-                result = conn.execute(sa.select(wallet).where(wallet.c.userId == f"{u}"))
-                for a in result:
-                    self.walletid = f"{a[0]}"
+                self.userid = conn.execute(sa.select([user.c.id]).where(user.c.email == e)).scalar()
+                self.walletid = conn.execute(sa.select([wallet.c.id]).where(wallet.c.userId == self.userid)).scalar()
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -137,9 +125,8 @@ class Program:
                         elif walletname.lower() == "q" or walletname.lower() == "quit":
                             quit()
                         else:
-                            metadata_obj = sa.MetaData()
-                            user = sa.Table("user", metadata_obj, autoload_with=self.engine)
-                            wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
+                            user = sa.Table("user", self.metadata_obj, autoload_with=self.engine)
+                            wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
                             try:
                                 with self.engine.begin() as conn:
                                     conn.execute(sa.insert(user), [
@@ -168,8 +155,7 @@ class Program:
                 self.register()
 
     def emailChecker(self, e):
-        metadata_obj = sa.MetaData()
-        user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+        user = sa.Table("user", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
                 result = conn.execute(sa.select([user.c.email]).where(user.c.email == f"{e}")).scalar()
@@ -178,8 +164,7 @@ class Program:
             print(f"Error returned: <<<{error}>>>")
 
     def passwordChecker(self, e, p):
-        metadata_obj = sa.MetaData()
-        user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+        user = sa.Table("user", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
                 pa, s = conn.execute(
@@ -244,8 +229,7 @@ class Program:
             quit()
         else:
             walletname = self.input
-            metadata_obj = sa.MetaData()
-            wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
+            wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
             try:
                 with self.engine.begin() as conn:
                     conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
@@ -258,18 +242,17 @@ class Program:
 
     def deposit(self):
         # shows their current balance here
-        metadata_obj = sa.MetaData()
-        wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
-        transactions = sa.Table("transactions", metadata_obj, autoload_with=self.engine)
+        wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
+        transactions = sa.Table("transactions", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.select(wallet).where(wallet.c.userId == self.userid))
-                for a in result:
-                    balance = f"{a[3]}"
-                    print("Current balance: " + balance)
+                balance = conn.execute(
+                    sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                ).scalar()
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
+        print(f"Current balance: {balance}")
         self.input = input("Enter deposit amount\nBack\nQuit\n\n")
         command = self.input.split()
 
@@ -307,18 +290,17 @@ class Program:
 
     def withdraw(self):
         # shows their current balance here
-        metadata_obj = sa.MetaData()
-        wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
-        transactions = sa.Table("transactions", metadata_obj, autoload_with=self.engine)
+        wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
+        transactions = sa.Table("transactions", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
-                result = conn.execute(sa.select(wallet).where(wallet.c.userId == self.userid))
-                for a in result:
-                    balance = f"{a[3]}"
-                    print("Current balance: " + balance)
+                balance = conn.execute(
+                    sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                ).scalar()
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
+        print(f"Current balance: {balance}")
         self.input = input("Enter withdrawal amount\nBack\nQuit\n\n")
         command = self.input.split()
 
@@ -396,8 +378,7 @@ class Program:
                     self.password = self.password.hex()
                     self.salt = self.salt.hex()
 
-                    metadata_obj = sa.MetaData()
-                    user = sa.Table("user", metadata_obj, autoload_with=self.engine)
+                    user = sa.Table("user", self.metadata_obj, autoload_with=self.engine)
                     with self.engine.begin() as conn:
 
                         conn.execute(sa.update(user).where(user.c.id == self.userid).
@@ -430,8 +411,7 @@ class Program:
             self.bet()
 
     def placeBet(self):
-        metadata_obj = sa.MetaData()
-        matches = sa.Table("matches", metadata_obj, autoload_with=self.engine)
+        matches = sa.Table("matches", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
                 upcoming = conn.execute(
@@ -497,8 +477,7 @@ class Program:
             self.placeBet2()
 
     def placeBet3(self):
-        metadata_obj = sa.MetaData()
-        wallet = sa.Table("wallet", metadata_obj, autoload_with=self.engine)
+        wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
         try:
             with self.engine.begin() as conn:
                 balance = conn.execute(
@@ -527,9 +506,9 @@ class Program:
                     print("Please enter a valid bet amount\n")
                     self.placeBet3()
                 else:
-                    pool = sa.Table("pool", metadata_obj, autoload_with=self.engine)
-                    transactions = sa.Table("transactions", metadata_obj, autoload_with=self.engine)
-                    bets = sa.Table("bets", metadata_obj, autoload_with=self.engine)
+                    pool = sa.Table("pool", self.metadata_obj, autoload_with=self.engine)
+                    transactions = sa.Table("transactions", self.metadata_obj, autoload_with=self.engine)
+                    bets = sa.Table("bets", self.metadata_obj, autoload_with=self.engine)
                     with self.engine.begin() as conn:
 
                         conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
@@ -611,15 +590,6 @@ class Program:
                             where matches.id = {matchid}
                             order by matches.id
                             """
-                    try:
-                        with self.engine.begin() as conn:
-                            result = conn.execute(sa.text(sqlteam1))
-                            print("Team 1 Players:")
-                            for id, players in result:
-                                print(f"{players}")
-                    except Exception as error:
-                        print(f"Error returned: <<<{error}>>>")
-
                     sqlteam2 = f"""
                             select distinct matches.id, p2.playername as team2players
                                 from matches 
@@ -630,6 +600,11 @@ class Program:
                             """
                     try:
                         with self.engine.begin() as conn:
+                            result = conn.execute(sa.text(sqlteam1))
+                            print("Team 1 Players:")
+                            for id, players in result:
+                                print(f"{players}")
+
                             result2 = conn.execute(sa.text(sqlteam2))
                             print("\nTeam 2 Players:")
                             for id, players in result2:
@@ -651,16 +626,16 @@ class Program:
             quit()
         elif command[0].lower() == 'm' or command[0].lower() == 'match':
             sql = """
-                            select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
-                            from results
-                                inner join matches on results.matchid = matches.id
-                                inner join teamId as t1 on matches.team1Id = t1.id
-                                inner join teamId as t2 on matches.team2Id = t2.id
-                                inner join map as m on matches.mapId = m.id
-                            where date < curdate()
-                            order by date desc
-                            limit 10
-                            """
+                select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
+                from results
+                    inner join matches on results.matchid = matches.id
+                    inner join teamId as t1 on matches.team1Id = t1.id
+                    inner join teamId as t2 on matches.team2Id = t2.id
+                    inner join map as m on matches.mapId = m.id
+                where date < curdate()
+                order by date desc
+                limit 10
+                """
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(sql))
@@ -694,14 +669,12 @@ class Program:
             print("Please enter a valid filter option\n")
             self.matchHistory()
         elif command[0] == "1":
-            mapdisplay = """
-            select * from map order by id              
-                """
+            maps = sa.Table("map", self.metadata_obj, autoload_with=self.engine)
             try:
                 with self.engine.begin() as conn:
-                    result = conn.execute(sa.text(mapdisplay))
+                    result = conn.execute(sa.select(maps).order_by(maps.c.id))
                     for id, name in result:
-                        print(f"Map ID: {id}, Map Name: {name}")
+                        print(f"{id}: {name}")
             except Exception as error:
                 print(f"Error returned: <<<{error}>>>")
 
@@ -795,12 +768,12 @@ class Program:
             self.betHistory()
         elif command[0] == "1":
             s = f"""
-                    select transactionid, matchid, betType.type, guess, bets.amount 
-                    from bets 
-                        inner join transactions on bets.transactionid = transactions.id
-                        inner join betType on bets.bettypeid = betType.id
-                    where walletid = {self.walletid} and transactiontypeid = 3             
-                                   """
+                select transactionid, matchid, betType.type, guess, bets.amount 
+                from bets 
+                    inner join transactions on bets.transactionid = transactions.id
+                    inner join betType on bets.bettypeid = betType.id
+                where walletid = {self.walletid} and transactiontypeid = 3             
+                """
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
@@ -815,7 +788,7 @@ class Program:
             s = f"""
                   select * from transactions
                     where walletid = {self.walletid} and transactiontypeid = 2              
-                       """
+                """
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
@@ -843,7 +816,7 @@ class Program:
             s = f"""
                   select * from transactions
                     where walletid = {self.walletid} and transactiontypeid = 4              
-                       """
+                """
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
@@ -864,7 +837,7 @@ class Program:
                 s = f"""
                       select * from transactions
                         where walletid = {self.walletid} and amount >= {a}             
-                           """
+                    """
                 try:
                     with self.engine.begin() as conn:
                         result = conn.execute(sa.text(s))
