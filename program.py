@@ -6,6 +6,7 @@ import sqlalchemy as sa
 from dotenv import load_dotenv
 import password_hash
 from datetime import date, timedelta
+import texttable as t
 
 
 def clearConsole():
@@ -317,7 +318,7 @@ class Program:
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
-        print(f"Current balance: {balance}")
+        print(f"Current balance: ${balance}")
         self.input = input("Enter deposit amount\nBack\nQuit\n\n")
         command = self.input.split()
 
@@ -374,7 +375,7 @@ class Program:
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
-        print(f"Current balance: {balance}")
+        print(f"Current balance: ${balance}")
         self.input = input("Enter withdrawal amount\nBack\nQuit\n\n")
         command = self.input.split()
 
@@ -526,7 +527,7 @@ class Program:
                         from matches
                         where `date` >= '{self.day}'
                     )
-                    select matches.id, t1.teamname, t2.teamname, m.name, date
+                    select matches.id, date, t1.teamname, t2.teamname, m.name
                     from matches
                         inner join teamId as t1 on matches.team1Id = t1.id
                         inner join teamId as t2 on matches.team2Id = t2.id
@@ -539,10 +540,15 @@ class Program:
         try:
             with self.engine.begin() as conn:
                 result = conn.execute(sa.text(sql))
-                for matchid, team1, team2, map, date in result:
-                    print(f"matchid: {matchid}, team1: {team1}, team2: {team2}, map: {map}, "
-                          f"date: {date}")
-                    upcoming.append(matchid)
+                tab = t.Texttable()
+                headings = ['Match Id', 'Date', 'Team 1', 'Team 2', 'Map']
+                tab.header(headings)
+
+                for row in result:
+                    tab.add_row(row)
+                    upcoming.append(row[0])
+                tab.set_cols_width([10, 15, 15, 15, 15])
+                print(tab.draw())
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -555,7 +561,7 @@ class Program:
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
-        self.input = input("Matches {self.first} to {self.last}\n\nEnter match id"
+        self.input = input(f"Matches {self.first} to {self.last}\n\nEnter match id"
                            "\nEnter Next to view next 10 matches"
                            "\nEnter Previous to view previous 10 matches"
                            "\nBack"
@@ -605,7 +611,31 @@ class Program:
                 self.placeBet()
 
     def placeBet2(self):
-        self.input = input("Choose your bet type:\n"
+        sql = f"""
+            select matches.id, date, t1.teamname, t2.teamname, m.name
+            from matches
+                inner join teamId as t1 on matches.team1Id = t1.id
+                inner join teamId as t2 on matches.team2Id = t2.id
+                inner join map as m on matches.mapId = m.id
+            where matches.id = {self.betmatch}
+        """
+        upcoming = []
+        try:
+            with self.engine.begin() as conn:
+                result = conn.execute(sa.text(sql))
+                tab = t.Texttable()
+                headings = ['Match Id', 'Date', 'Team 1', 'Team 2', 'Map']
+                tab.header(headings)
+
+                for row in result:
+                    tab.add_row(row)
+                    upcoming.append(row[0])
+                tab.set_cols_width([10, 15, 15, 15, 15])
+                print(tab.draw())
+        except Exception as error:
+            print(f"Error returned: <<<{error}>>>")
+
+        self.input = input("\nChoose your bet type:\n"
                            "1: Team 1 wins\n"
                            "2: Team 2 wins\n"
                            "3: Last digit in total kills\n"
@@ -660,7 +690,7 @@ class Program:
                 ).scalar()
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
-
+        print(f'Current Balance: ${balance}')
         self.input = input("Enter bet amount\nBack\nQuit\n\n")
         command = self.input.split()
 
@@ -735,7 +765,7 @@ class Program:
                 from matches
                 where `date` >= '{self.day}'
             )
-            select matches.id, t1.teamname, t2.teamname, m.name, date
+            select matches.id, date, t1.teamname, t2.teamname, m.name
             from matches
                 inner join teamId as t1 on matches.team1Id = t1.id
                 inner join teamId as t2 on matches.team2Id = t2.id
@@ -748,10 +778,15 @@ class Program:
         try:
             with self.engine.begin() as conn:
                 result = conn.execute(sa.text(sql))
-                for matchid, team1, team2, map, date in result:
-                    print(f"matchid: {matchid}, team1: {team1}, team2: {team2}, map: {map}, "
-                          f"date: {date}")
-                    upcoming.append(matchid)
+                tab = t.Texttable()
+                headings = ['Match Id', 'Date', 'Team 1', 'Team 2', 'Map']
+                tab.header(headings)
+
+                for row in result:
+                    tab.add_row(row)
+                    upcoming.append(row[0])
+                tab.set_cols_width([10, 15, 15, 15, 15])
+                print(tab.draw())
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -879,7 +914,7 @@ class Program:
                     inner join map as m on matches.mapId = m.id
                     where `date` < '{self.day}' and m.id = {n}
                 )
-              select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
+              select results.matchid, date, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, totalkills, headshotcount
                 from results
                     inner join matches on results.matchid = matches.id
                     inner join teamId as t1 on matches.team1Id = t1.id
@@ -892,10 +927,15 @@ class Program:
         try:
             with self.engine.begin() as conn:
                 result = conn.execute(sa.text(sql))
-                for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
-                    print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
-                          f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
-                          f"Team2 Score: {t2s} Map: {m}, Date: {date}")
+                tab = t.Texttable()
+                headings = ['Match Id', 'Date', 'Team 1', 'Team 1 Score',
+                            'Team 2', 'Team 2 Score', 'Map', 'Total Kills',
+                            'Headshot Count']
+                tab.header(headings)
+                for row in result:
+                    tab.add_row(row)
+                tab.set_cols_width([10, 10, 15, 10, 15, 10, 15, 10, 10])
+                print(tab.draw())
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
 
@@ -943,7 +983,7 @@ class Program:
                 from matches
                 where `date` < '{self.day}'
             )
-            select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
+            select results.matchid, date, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, totalkills, headshotcount
             from results
                 inner join matches on results.matchid = matches.id
                 inner join teamId as t1 on matches.team1Id = t1.id
@@ -956,19 +996,24 @@ class Program:
         try:
             with self.engine.begin() as conn:
                 result = conn.execute(sa.text(sql))
-                for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
-                    print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
-                          f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
-                          f"Team2 Score: {t2s} Map: {m}, Date: {date}")
+                tab = t.Texttable()
+                headings = ['Match Id', 'Date', 'Team 1', 'Team 1 Score',
+                            'Team 2', 'Team 2 Score', 'Map', 'Total Kills',
+                            'Headshot Count']
+                tab.header(headings)
+                for row in result:
+                    tab.add_row(row)
+                tab.set_cols_width([10, 10, 15, 10, 15, 10, 15, 10, 10])
+                print(tab.draw())
         except Exception as error:
             print(f"Error returned: <<<{error}>>>")
         # brings up a list of matches played first
-        self.input = input(f"Matches {self.first} to {self.last}\n\n"
+        self.input = input(f"Matches {self.first} to {self.last}\n"
                            f"\nEnter Next to view next 10 matches"
-                           f"\nEnter Previous to view previous 10 matches"
+                           f"\nEnter Previous to view previous 10 matches\n"
                            f"Filter Options:\n"
-                           f"1: Map\n"
-                           f"2: Match ID\n"
+                           f"  1: Map\n"
+                           f"  2: Match ID\n"
                            f"Back\nQuit\n\n")
         command = self.input.split()
 
@@ -1041,7 +1086,7 @@ class Program:
                 try:
                     mwant = int(command2[0])
                     sql2 = f"""
-                                 select results.matchid, totalkills, headshotcount, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, date
+                                 select results.matchid, date, t1.teamname as team1, team1score, t2.teamname as team2, team2score, m.name, totalkills, headshotcount
                                    from results
                                        inner join matches on results.matchid = matches.id
                                        inner join teamId as t1 on matches.team1Id = t1.id
@@ -1052,10 +1097,15 @@ class Program:
                     try:
                         with self.engine.begin() as conn:
                             result = conn.execute(sa.text(sql2))
-                            for matchid, tk, hs, team1, t1s, team2, t2s, m, date in result:
-                                    print(f"Match ID: {matchid}, Total Kills: {tk}, Headshot Count: {hs}, "
-                                          f"Team1: {team1}, Team1 Score: {t1s}, Team2: {team2}, "
-                                          f"Team2 Score: {t2s} Map: {m}, Date: {date}")
+                            tab = t.Texttable()
+                            headings = ['Match Id', 'Date', 'Team 1', 'Team 1 Score',
+                                        'Team 2', 'Team 2 Score', 'Map', 'Total Kills',
+                                        'Headshot Count']
+                            tab.header(headings)
+                            tab.set_cols_width([10, 10, 15, 10, 15, 10, 15, 10, 10])
+                            for row in result:
+                                tab.add_row(row)
+                            print(tab.draw())
                     except Exception as error:
                         print(f"Error returned: <<<{error}>>>")
 
@@ -1073,7 +1123,6 @@ class Program:
                     else:
                         clearConsole()
                         self.matchHistory()
-
 
                 except ValueError:
                     clearConsole()
@@ -1108,7 +1157,7 @@ class Program:
             self.betHistory()
         elif command[0] == "1":
             s = f"""
-                select transactionid, matchid, betType.type, guess, bets.amount 
+                select transactions.id, matchid, betType.type, guess, bets.amount 
                 from bets 
                     inner join transactions on bets.transactionid = transactions.id
                     inner join betType on bets.bettypeid = betType.id
@@ -1118,55 +1167,75 @@ class Program:
                 clearConsole()
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
-                    for tid, mid, type, guess, amount in result:
-                        print(f"Transaction ID: {tid},  Match ID: {mid},  Bet Type: {type}, "
-                              f"Guess: {guess},  Amount: {amount}")
-                    print("\n")
+                    tab = t.Texttable()
+                    headings = ['Transaction Id', 'Match Id', 'Type of Bet', 'Guess',
+                                'Bet Amount ($)']
+                    tab.header(headings)
+                    for row in result:
+                        tab.add_row(row)
+                    tab.set_cols_width([11, 10, 10, 10, 10])
+                    print(tab.draw())
+                    print()
                     self.betHistory()
             except Exception as error:
                 print(f"Error returned: <<<{error}>>>")
         elif command[0] == "2":
             s = f"""
-                  select * from transactions
+                  select id, amount from transactions
                     where walletid = {self.walletid} and transactiontypeid = 2              
                 """
             clearConsole()
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
-                    for id, ttype, wid, amount in result:
-                        print(f"ID: {id}, Amount: {amount}")
-                    print("\n")
+                    tab = t.Texttable()
+                    headings = ['Transaction Id', 'Amount ($)']
+                    tab.header(headings)
+                    for row in result:
+                        tab.add_row(row)
+                    tab.set_cols_width([11, 10])
+                    print(tab.draw())
+                    print()
                     self.betHistory()
             except Exception as error:
                 print(f"Error returned: <<<{error}>>>")
         elif command[0] == "3":
             s = f"""
-                  select * from transactions
+                  select id, amount from transactions
                     where walletid = {self.walletid} and transactiontypeid = 1              
                        """
             clearConsole()
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
-                    for id, ttype, wid, amount in result:
-                        print(f"ID: {id}, Amount: {amount}")
-                    print("\n")
+                    tab = t.Texttable()
+                    headings = ['Transaction Id', 'Amount ($)']
+                    tab.header(headings)
+                    for row in result:
+                        tab.add_row(row)
+                    tab.set_cols_width([11, 10])
+                    print(tab.draw())
+                    print()
                     self.betHistory()
             except Exception as error:
                 print(f"Error returned: <<<{error}>>>")
         elif command[0] == "4":
             s = f"""
-                  select * from transactions
+                  select id, amount from transactions
                     where walletid = {self.walletid} and transactiontypeid = 4              
                 """
             clearConsole()
             try:
                 with self.engine.begin() as conn:
                     result = conn.execute(sa.text(s))
-                    for id, ttype, wid, amount in result:
-                        print(f"ID: {id}, Amount: {amount}")
-                    print("\n")
+                    tab = t.Texttable()
+                    headings = ['Transaction Id', 'Amount ($)']
+                    tab.header(headings)
+                    for row in result:
+                        tab.add_row(row)
+                    tab.set_cols_width([11, 10])
+                    print(tab.draw())
+                    print()
                     self.betHistory()
             except Exception as error:
                 print(f"Error returned: <<<{error}>>>")
@@ -1181,16 +1250,21 @@ class Program:
                 self.betHistory()
             if a >= 0:
                 s = f"""
-                      select t.id, amount, type from transactions as t
+                      select t.id, type, amount from transactions as t
                         join transactionType as tt on t.transactiontypeid = tt.id 
                         where walletid = {self.walletid} and amount >= {a}             
                     """
                 try:
                     with self.engine.begin() as conn:
                         result = conn.execute(sa.text(s))
-                        for id, amount, type in result:
-                            print(f"ID: {id}, Amount: {amount}, Type: {type}")
-                        print("\n")
+                        tab = t.Texttable()
+                        headings = ['Transaction Id', 'Type of Transaction', 'Amount ($)']
+                        tab.header(headings)
+                        for row in result:
+                            tab.add_row(row)
+                        tab.set_cols_width([11, 11, 10])
+                        print(tab.draw())
+                        print()
                         self.betHistory()
                 except Exception as error:
                     print(f"Error returned: <<<{error}>>>")
