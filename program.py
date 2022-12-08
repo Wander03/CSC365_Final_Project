@@ -1,12 +1,11 @@
 import os
 import urllib.parse
-
-import pandas as pd
 import sqlalchemy as sa
 from dotenv import load_dotenv
 import password_hash
 from datetime import date, timedelta
 import texttable as t
+import pandas as pd
 
 
 def clearConsole():
@@ -31,7 +30,7 @@ class Program:
         # Create a new DB engine based on our connection string
         self.engine = sa.create_engine(self.connectionString)
 
-        self.day = date(2022, 12, 1)
+        self.day = date(2022, 12, 29)
 
         self.input = None
         self.input2 = None
@@ -47,6 +46,8 @@ class Program:
         self.bettype = None
         self.betguess = None
         self.walletid = None
+        self.odd1 = None
+        self.odd2 = None
         self.metadata_obj = sa.MetaData()
         self.start()
 
@@ -114,7 +115,13 @@ class Program:
                 self.userid = conn.execute(sa.select([user.c.id]).where(user.c.email == e)).scalar()
                 self.walletid = conn.execute(sa.select([wallet.c.id]).where(wallet.c.userId == self.userid)).scalar()
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
     def register(self):
         clearConsole()
@@ -184,7 +191,13 @@ class Program:
                                     ],
                                                  )
                             except Exception as error:
-                                print(f"Error returned: <<<{error}>>>")
+                                r = 'a'
+                                while r != 'y' or r != 'n':
+                                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                                    if r == 'y':
+                                        self.start()
+                                    elif r == 'n':
+                                        quit()
                             clearConsole()
                             print("Registration Successful! You may now login\n")
                             self.start()
@@ -200,7 +213,13 @@ class Program:
                 result = conn.execute(sa.select([user.c.email]).where(user.c.email == f"{e}")).scalar()
                 return result is not None
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
     def passwordChecker(self, e, p):
         user = sa.Table("user", self.metadata_obj, autoload_with=self.engine)
@@ -210,14 +229,121 @@ class Program:
                     sa.select([user.c.passwordHash, user.c.salt]).where(user.c.email == f"{e}")
                 ).fetchall()[0]
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
         s = bytes.fromhex(s)
         pa = bytes.fromhex(pa)
         retrieved = password_hash.get_hash(p, s)
         return retrieved == pa
 
+    def payout(self):
+        sql = f"""
+            with matchids as (
+                select distinct matchid 
+                    from bets
+                        join matches on matches.id = bets.matchid
+                        join transactions on bets.transactionid = transactions.id
+                        where date = '{self.day}'
+            ), subttotals as (
+              select m.matchid, bettypeid, sum(amount) subt
+                from matchids as m
+                    left join pool on m.matchid = pool.matchid
+                where bettypeid in (1, 2)
+                group by m.matchid, bettypeid
+            ), odds as (
+                select matchid, bettypeid, 
+                case when subt = (sum(subt) over(partition by matchid))
+                    then 1.2
+                    when round(sum(subt) over(partition by matchid) / subt, 2) - 0.1 = 1
+                    then 1.05
+                    else round(sum(subt) over(partition by matchid) / subt, 2) - 0.1
+                    end odds
+                from subttotals
+            ), winners as (
+                select m.matchid, case when team1Score > team2Score then 1 else 2 end win
+                    from matchids as m
+                        left join results on m.matchid = results.matchid
+            )
+            select walletid, round(bets.amount * odds, 2) payout
+                from bets
+                    join matches on matches.id = bets.matchid
+                    join transactions on bets.transactionid = transactions.id
+                    join odds on odds.matchid = matches.id and odds.bettypeid = bets.bettypeid
+                    join winners on winners.matchid = odds.matchid
+                    where date = '{self.day}' and odds.bettypeid = win
+            """
+        sql2 = f"""
+            with matchids as (
+            select distinct matchid 
+                from bets
+                    join matches on matches.id = bets.matchid
+                    join transactions on bets.transactionid = transactions.id
+                    where date = '{self.day}'
+            ), playerBets as (
+            select m.matchid, bettypeid, amount, guess, transactionid
+            from matchids as m
+                left join bets on m.matchid = bets.matchid
+            where bettypeid in (3, 4)
+            )
+            select walletid, round(p.amount * 4, 2) payout
+            from playerBets as p
+                left join results on p.matchid = results.matchid
+                left join transactions on p.transactionid = transactions.id
+            where case when bettypeid = 3 then guess = totalkills % 10 else guess = headshotcount % 10 end
+            """
+        wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
+        transactions = sa.Table("transactions", self.metadata_obj, autoload_with=self.engine)
+        try:
+            with self.engine.begin() as conn:
+                result = conn.execute(sa.text(sql)).fetchall()
+
+                for walletid, amount in result:
+
+                    balance = conn.execute(
+                        sa.select([wallet.c.amountStored]).where(wallet.c.id == walletid)
+                    ).scalar()
+
+                    conn.execute(sa.update(wallet).where(wallet.c.id == walletid).
+                                 values(amountStored=float(balance) + float(amount))
+                                 )
+
+                    conn.execute(sa.insert(transactions), [
+                        {'transactionTypeId': [4], 'walletId': [walletid], 'amount': [float(amount)]}
+                    ],
+                                 )
+
+                result = conn.execute(sa.text(sql2)).fetchall()
+
+                for walletid, amount in result:
+                    balance = conn.execute(
+                        sa.select([wallet.c.amountStored]).where(wallet.c.id == walletid)
+                    ).scalar()
+
+                    conn.execute(sa.update(wallet).where(wallet.c.id == walletid).
+                                 values(amountStored=float(balance) + float(amount))
+                                 )
+
+                    conn.execute(sa.insert(transactions), [
+                        {'transactionTypeId': [4], 'walletId': [walletid], 'amount': [float(amount)]}
+                    ],
+                                 )
+
+        except Exception as error:
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
+
     def home(self):
-        self.input = input("Bet\nHistory\nAccount\nLogout\nQuit\n\n")
+        self.input = input("Bet\nHistory\nAccount\nNext Day\nLogout\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -239,8 +365,9 @@ class Program:
             self.history()
         elif command[0].lower() == 'n' or command[0].lower() == 'next':
             clearConsole()
+            self.payout()
             self.day += timedelta(days=1)
-            print(f'Day advanced to {self.day}!')
+            print(f'Day advanced to {self.day}!\n')
             self.home()
         else:
             clearConsole()
@@ -301,7 +428,13 @@ class Program:
                                  values(name=walletname)
                                  )
             except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+                r = 'a'
+                while r != 'y' or r != 'n':
+                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                    if r == 'y':
+                        self.start()
+                    elif r == 'n':
+                        quit()
             clearConsole()
             print("Update Successful!\n")
             self.account()
@@ -316,7 +449,13 @@ class Program:
                     sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
                 ).scalar()
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
         print(f"Current balance: ${balance}")
         self.input = input("Enter deposit amount\nBack\nQuit\n\n")
@@ -373,7 +512,13 @@ class Program:
                     sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
                 ).scalar()
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
         print(f"Current balance: ${balance}")
         self.input = input("Enter withdrawal amount\nBack\nQuit\n\n")
@@ -490,6 +635,36 @@ class Program:
                     print("The passwords do not match\n")
                     self.updatePassword()
 
+    def odds_calc(self):
+        sql = f"""
+              select sum(amount)
+                from pool
+                where matchid = {self.betmatch} and bettypeid in (1, 2)
+                group by bettypeid
+                """
+        try:
+            with self.engine.begin() as conn:
+                result = conn.execute(sa.text(sql)).fetchall()
+                if len(result) != 2 or result[0][0] == 0 or result[1][0] == 0:
+                    self.odd1 = 1.2
+                    self.odd2 = 1.2
+                else:
+                    self.odd1 = float(round((result[0][0] + result[1][0]) / result[0][0], 2)) - 0.1
+                    self.odd2 = float(round((result[0][0] + result[1][0]) / result[1][0], 2)) - 0.1
+                    if self.odd1 == 1:
+                        self.odd1 = 1.05
+                    if self.odd2 == 1:
+                        self.odd2 = 1.05
+
+        except Exception as error:
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
+
     def bet(self):
         self.input = input("Place bets\nView Upcoming Matches\nBack\nQuit\n\n")
         command = self.input.split()
@@ -550,7 +725,13 @@ class Program:
                 tab.set_cols_width([10, 15, 15, 15, 15])
                 print(tab.draw())
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
         matches = sa.Table("matches", self.metadata_obj, autoload_with=self.engine)
         try:
@@ -559,7 +740,13 @@ class Program:
                     sa.select([matches.c.id]).where(matches.c.date >= self.day)
                 ).scalars().all()
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
         self.input = input(f"Matches {self.first} to {self.last}\n\nEnter match id"
                            "\nEnter Next to view next 10 matches"
@@ -633,14 +820,20 @@ class Program:
                 tab.set_cols_width([10, 15, 15, 15, 15])
                 print(tab.draw())
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
-
-        self.input = input("\nChoose your bet type:\n"
-                           "1: Team 1 wins\n"
-                           "2: Team 2 wins\n"
-                           "3: Last digit in total kills\n"
-                           "4: Last digit in total headshots\n"
-                           "Back\nQuit\n\n")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
+        self.odds_calc()
+        self.input = input(f"\nChoose your bet type:\n"
+                           f"1: Team 1 wins (odds: {self.odd1}x)\n"
+                           f"2: Team 2 wins (odds: {self.odd2}x)\n"
+                           f"3: Last digit in total kills (odds: 4.00x)\n"
+                           f"4: Last digit in total headshots (odds: 4.00x)\n"
+                           f"Back\nQuit\n\n")
         command = self.input.split()
         if not command:
             clearConsole()
@@ -689,7 +882,13 @@ class Program:
                     sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
                 ).scalar()
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
         print(f'Current Balance: ${balance}')
         self.input = input("Enter bet amount\nBack\nQuit\n\n")
         command = self.input.split()
@@ -788,7 +987,13 @@ class Program:
                 tab.set_cols_width([10, 15, 15, 15, 15])
                 print(tab.draw())
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
         self.input = input(f"Matches {self.first} to {self.last}\n\nEnter a match id for more details"
                            f"\nEnter Next to view next 10 matches"
@@ -874,7 +1079,13 @@ class Program:
                             quit()
 
                     except Exception as error:
-                        print(f"Error returned: <<<{error}>>>")
+                        r = 'a'
+                        while r != 'y' or r != 'n':
+                            r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                            if r == 'y':
+                                self.start()
+                            elif r == 'n':
+                                quit()
             except ValueError:
                 clearConsole()
                 print("Please select a valid match\n")
@@ -937,7 +1148,13 @@ class Program:
                 tab.set_cols_width([10, 10, 15, 10, 15, 10, 15, 10, 10])
                 print(tab.draw())
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
 
         self.input = input(f"Matches {self.first2} to {self.last2}\n\n"
                            f"\nEnter Next to view next 10 matches"
@@ -1006,7 +1223,13 @@ class Program:
                 tab.set_cols_width([10, 10, 15, 10, 15, 10, 15, 10, 10])
                 print(tab.draw())
         except Exception as error:
-            print(f"Error returned: <<<{error}>>>")
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
         # brings up a list of matches played first
         self.input = input(f"Matches {self.first} to {self.last}\n"
                            f"\nEnter Next to view next 10 matches"
@@ -1056,7 +1279,13 @@ class Program:
                     for id, name in result:
                         print(f"{id}: {name}")
             except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+                r = 'a'
+                while r != 'y' or r != 'n':
+                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                    if r == 'y':
+                        self.start()
+                    elif r == 'n':
+                        quit()
             self.input2 = input("Enter the map ID\n\n")
             command2 = self.input2.split()
             if len(command2) > 1:
@@ -1107,7 +1336,13 @@ class Program:
                                 tab.add_row(row)
                             print(tab.draw())
                     except Exception as error:
-                        print(f"Error returned: <<<{error}>>>")
+                        r = 'a'
+                        while r != 'y' or r != 'n':
+                            r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                            if r == 'y':
+                                self.start()
+                            elif r == 'n':
+                                quit()
 
                     self.input = input("\nBack\nQuit\n\n")
                     command = self.input.split()
@@ -1178,7 +1413,13 @@ class Program:
                     print()
                     self.betHistory()
             except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+                r = 'a'
+                while r != 'y' or r != 'n':
+                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                    if r == 'y':
+                        self.start()
+                    elif r == 'n':
+                        quit()
         elif command[0] == "2":
             s = f"""
                   select id, amount from transactions
@@ -1198,7 +1439,13 @@ class Program:
                     print()
                     self.betHistory()
             except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+                r = 'a'
+                while r != 'y' or r != 'n':
+                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                    if r == 'y':
+                        self.start()
+                    elif r == 'n':
+                        quit()
         elif command[0] == "3":
             s = f"""
                   select id, amount from transactions
@@ -1218,7 +1465,13 @@ class Program:
                     print()
                     self.betHistory()
             except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+                r = 'a'
+                while r != 'y' or r != 'n':
+                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                    if r == 'y':
+                        self.start()
+                    elif r == 'n':
+                        quit()
         elif command[0] == "4":
             s = f"""
                   select id, amount from transactions
@@ -1238,7 +1491,13 @@ class Program:
                     print()
                     self.betHistory()
             except Exception as error:
-                print(f"Error returned: <<<{error}>>>")
+                r = 'a'
+                while r != 'y' or r != 'n':
+                    r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                    if r == 'y':
+                        self.start()
+                    elif r == 'n':
+                        quit()
         elif command[0] == "5":
             clearConsole()
             self.input2 = input("Enter an amount\n\n")
@@ -1267,14 +1526,20 @@ class Program:
                         print()
                         self.betHistory()
                 except Exception as error:
-                    print(f"Error returned: <<<{error}>>>")
+                    r = 'a'
+                    while r != 'y' or r != 'n':
+                        r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                        if r == 'y':
+                            self.start()
+                        elif r == 'n':
+                            quit()
             else:
                 clearConsole()
                 print("Please enter a valid amount")
                 self.betHistory()
         else:
             clearConsole()
-            print("LOSER!\n")
+            print("Please enter a valid option")
             self.betHistory()
 
 
