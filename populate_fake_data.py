@@ -10,8 +10,8 @@ import hashlib
 
 counter = 1
 accountNum = 51
-minMatch = 40474
-maxMatch = 43474
+minMatch = 39474
+maxMatch = 42474
 
 
 def create_users_wallets(df_user, df_wallet):
