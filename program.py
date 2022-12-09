@@ -925,7 +925,9 @@ class Program:
                     transactions = sa.Table("transactions", self.metadata_obj, autoload_with=self.engine)
                     bets = sa.Table("bets", self.metadata_obj, autoload_with=self.engine)
                     with self.engine.begin() as conn:
-
+                        balance = conn.execute(
+                            sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                        ).scalar()
                         conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
                                      values(amountStored=float(balance) - betamount)
                                      )
