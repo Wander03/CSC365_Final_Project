@@ -478,7 +478,9 @@ class Program:
                 depositamount = float(command[0])
                 if depositamount >= 10:
                     with self.engine.begin() as conn:
-
+                        balance = conn.execute(
+                            sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                        ).scalar()
                         conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
                                      values(amountStored=float(balance) + depositamount)
                                      )
@@ -553,7 +555,9 @@ class Program:
                     self.withdraw()
                 else:
                     with self.engine.begin() as conn:
-
+                        balance = conn.execute(
+                            sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                        ).scalar()
                         conn.execute(sa.update(wallet).where(wallet.c.userId == self.userid).
                                      values(amountStored=float(balance) - withdrawamount)
                                      )
