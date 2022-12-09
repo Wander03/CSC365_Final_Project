@@ -408,7 +408,7 @@ class Program:
             self.account()
 
     def changeWallet(self):
-        self.input = input("Enter new wallet name\nBack\nQuit\n\n")
+        self.input = input("Enter new wallet name\nBack\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -417,6 +417,9 @@ class Program:
         elif command[0].lower() == 'b' or command[0].lower() == 'back':
             clearConsole()
             self.account()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
         else:
@@ -458,7 +461,7 @@ class Program:
                     quit()
 
         print(f"Current balance: ${balance}")
-        self.input = input("Enter deposit amount\nBack\nQuit\n\n")
+        self.input = input("Enter deposit amount\nBack\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -469,6 +472,9 @@ class Program:
             self.account()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please enter a valid amount\n")
@@ -523,7 +529,7 @@ class Program:
                     quit()
 
         print(f"Current balance: ${balance}")
-        self.input = input("Enter withdrawal amount\nBack\nQuit\n\n")
+        self.input = input("Enter withdrawal amount\nBack\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -534,6 +540,9 @@ class Program:
             self.account()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please enter a valid amount\n")
@@ -574,7 +583,7 @@ class Program:
                 self.withdraw()
 
     def oldPassword(self):
-        self.input = input("Enter old password\nBack\nQuit\n\n")
+        self.input = input("Enter old password\nBack\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -585,6 +594,9 @@ class Program:
             self.account()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Incorrect information\n")
@@ -755,7 +767,7 @@ class Program:
         self.input = input(f"Matches {self.first} to {self.last}\n\nEnter match id"
                            "\nEnter Next to view next 10 matches"
                            "\nEnter Previous to view previous 10 matches"
-                           "\nBack"
+                           "\nBack\nHome"
                            "\nQuit\n\n")
         command = self.input.split()
 
@@ -767,6 +779,9 @@ class Program:
             self.bet()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif command[0].lower() == 'n' or command[0].lower() == 'next':
             if self.first == 41:
                 clearConsole()
@@ -837,7 +852,7 @@ class Program:
                            f"2: Team 2 wins (odds: {round(self.odd2, 2)}x)\n"
                            f"3: Last digit in total kills (odds: 4.00x)\n"
                            f"4: Last digit in total headshots (odds: 4.00x)\n"
-                           f"Back\nQuit\n\n")
+                           f"Back\nHome\nQuit\n\n")
         command = self.input.split()
         if not command:
             clearConsole()
@@ -847,6 +862,9 @@ class Program:
             self.placeBet()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please choose a valid bet type\n")
@@ -894,7 +912,7 @@ class Program:
                 elif r == 'n':
                     quit()
         print(f'Current Balance: ${balance}')
-        self.input = input("Enter bet amount\nBack\nQuit\n\n")
+        self.input = input("Enter bet amount\nBack\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -905,6 +923,9 @@ class Program:
             self.placeBet2()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please enter a valid bet amount\n")
@@ -1004,7 +1025,7 @@ class Program:
         self.input = input(f"Matches {self.first} to {self.last}\n\nEnter a match id for more details"
                            f"\nEnter Next to view next 10 matches"
                            f"\nEnter Previous to view previous 10 matches"
-                           f"\nBack"
+                           f"\nBack\nHome"
                            f"\nQuit\n\n")
         command = self.input.split()
 
@@ -1034,6 +1055,9 @@ class Program:
             self.bet()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please select a valid match\n")
@@ -1075,7 +1099,7 @@ class Program:
                             for id, players in result2:
                                 print(f"{players}")
 
-                        self.input = input('\nBack\nQuit')
+                        self.input = input('\nBack\nHome\nQuit')
                         command = self.input.split()
 
                         if not command or command[0].lower() == 'b' or command[0].lower() == 'back':
@@ -1083,6 +1107,9 @@ class Program:
                             self.viewUpcomingMatch()
                         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
                             quit()
+                        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+                            clearConsole()
+                            self.home()
 
                     except Exception as error:
                         r = 'a'
@@ -1165,7 +1192,7 @@ class Program:
         self.input = input(f"Matches {self.first2} to {self.last2}\n\n"
                            f"\nEnter Next to view next 10 matches"
                            f"\nEnter Previous to view previous 10 matches"
-                           f"\nBack"
+                           f"\nBack\nHome"
                            f"\nQuit\n\n")
         command = self.input.split()
 
@@ -1195,6 +1222,9 @@ class Program:
             self.matchHistory()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         else:
             print('Please enter a valid option')
             self.mapMatchHistory(n)
@@ -1243,7 +1273,7 @@ class Program:
                            f"Filter Options:\n"
                            f"  1: Map\n"
                            f"  2: Match ID\n"
-                           f"Back\nQuit\n\n")
+                           f"Back\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -1272,6 +1302,9 @@ class Program:
             self.history()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please enter a valid filter option\n")
@@ -1350,7 +1383,7 @@ class Program:
                             elif r == 'n':
                                 quit()
 
-                    self.input = input("\nBack\nQuit\n\n")
+                    self.input = input("\nBack\nHome\nQuit\n\n")
                     command = self.input.split()
 
                     if not command:
@@ -1361,6 +1394,9 @@ class Program:
                         self.matchHistory()
                     elif command[0].lower() == 'q' or command[0].lower() == 'quit':
                         quit()
+                    elif command[0].lower() == 'h' or command[0].lower() == 'home':
+                        clearConsole()
+                        self.home()
                     else:
                         clearConsole()
                         self.matchHistory()
@@ -1381,7 +1417,7 @@ class Program:
                            "3: Withdrawal History\n"
                            "4: Payout History\n"
                            "5: Any Transactions over X Amount\n"
-                           "Back\nQuit\n\n")
+                           "Back\nHome\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -1392,6 +1428,9 @@ class Program:
             self.history()
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
+        elif command[0].lower() == 'h' or command[0].lower() == 'home':
+            clearConsole()
+            self.home()
         elif len(command) > 1:
             clearConsole()
             print("Please enter a valid option\n")
