@@ -30,7 +30,7 @@ class Program:
         # Create a new DB engine based on our connection string
         self.engine = sa.create_engine(self.connectionString)
 
-        self.day = date(2022, 12, 29)
+        self.day = date(2022, 11, 22)
 
         self.input = None
         self.input2 = None
@@ -343,7 +343,7 @@ class Program:
                     quit()
 
     def home(self):
-        self.input = input("Bet\nHistory\nAccount\nNext Day\nLogout\nQuit\n\n")
+        self.input = input(f"Current Day: {self.day}\n\nBet\nHistory\nAccount\nNext Day\nLogout\nQuit\n\n")
         command = self.input.split()
 
         if not command:
@@ -829,8 +829,8 @@ class Program:
                     quit()
         self.odds_calc()
         self.input = input(f"\nChoose your bet type:\n"
-                           f"1: Team 1 wins (odds: {self.odd1}x)\n"
-                           f"2: Team 2 wins (odds: {self.odd2}x)\n"
+                           f"1: Team 1 wins (odds: {round(self.odd1, 2)}x)\n"
+                           f"2: Team 2 wins (odds: {round(self.odd2, 2)}x)\n"
                            f"3: Last digit in total kills (odds: 4.00x)\n"
                            f"4: Last digit in total headshots (odds: 4.00x)\n"
                            f"Back\nQuit\n\n")
