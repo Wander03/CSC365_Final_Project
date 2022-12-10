@@ -30,7 +30,7 @@ class Program:
         # Create a new DB engine based on our connection string
         self.engine = sa.create_engine(self.connectionString)
 
-        self.day = date(2022, 11, 22)
+        self.day = date(2022, 11, 23)
 
         self.input = None
         self.input2 = None
