@@ -73,7 +73,6 @@ class Program:
             self.start()
 
     def login(self):
-        clearConsole()
         self.input = input("Login with your email and password: <email> <password>\nBack\nQuit\n\n")
         command = self.input.split()
 
@@ -343,6 +342,23 @@ class Program:
                     quit()
 
     def home(self):
+        wallet = sa.Table("wallet", self.metadata_obj, autoload_with=self.engine)
+        try:
+            with self.engine.begin() as conn:
+                balance = conn.execute(
+                    sa.select([wallet.c.amountStored]).where(wallet.c.userId == self.userid)
+                ).scalar()
+        except Exception as error:
+            r = 'a'
+            while r != 'y' or r != 'n':
+                r = input(f"Error returned: <<<{error}>>>\nWould you like to restart? (y/n)")
+                if r == 'y':
+                    self.start()
+                elif r == 'n':
+                    quit()
+
+        print(f"Current balance: ${balance}")
+
         self.input = input(f"Current Day: {self.day}\n\nBet\nHistory\nAccount\nNext Day\nLogout\nQuit\n\n")
         command = self.input.split()
 
@@ -623,7 +639,7 @@ class Program:
         elif command[0].lower() == 'q' or command[0].lower() == 'quit':
             quit()
         else:  # confirms password here
-            self.input2 = input("Confirm your new password\nCancel\nQuit\n\n")
+            self.input2 = input("\nConfirm your new password\nCancel\nQuit\n\n")
             command2 = self.input2.split()
             if command2[0].lower() == 'c' or command2[0].lower() == 'cancel':
                 clearConsole()
